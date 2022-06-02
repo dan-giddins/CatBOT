@@ -3,35 +3,49 @@ using Discord.Commands;
 
 namespace TextCommandFramework.Modules
 {
-    // Modules must be public and inherit from an IModuleBase
     public class CommandsModule : ModuleBase<SocketCommandContext>
     {
-        // Dependency Injection will fill this value in for us
-        public PictureService PictureService { get; set; }
+        public PictureService _pictureService { get; set; }
 
-        [Command("ping")]
-        [Alias("meow", "hello", "p")]
-        public Task PingAsync()
-            => ReplyAsync("*meows at you*");
+        public CommandsModule(PictureService pictureService) =>
+            _pictureService = pictureService;
+
+        [Command("help")]
+        [Alias("h")]
+        public Task Help()
+            => ReplyAsync("!help - Shows this message" +
+                "\n!stroke - Give CatBOT some attention" +
+                "\n!cat - CatBOT brings you a random picture of a cat");
+
+        [Command("meow")]
+        [Alias("ping", "hello", "m", "p")]
+        public Task Meow()
+            => ReplyAsync("*meows back at you*");
+
+        [Command("stroke")]
+        [Alias("s")]
+        public Task Stroke()
+            => ReplyAsync("*meows happily*");
 
         [Command("cat")]
-        public async Task CatAsync()
+        [Alias("c")]
+        public async Task Cat()
         {
             // Get a stream containing an image of a cat
-            var stream = await PictureService.GetCatPictureAsync();
+            var stream = await _pictureService.GetCatPictureAsync();
             // Streams must be seeked to their beginning before being uploaded!
             stream.Seek(0, SeekOrigin.Begin);
             await Context.Channel.SendFileAsync(stream, "cat.png");
         }
 
-        // Get info on a user, or the user who invoked the command if one is not specified
+        //Get info on a user, or the user who invoked the command if one is not specified
         //[Command("userinfo")]
-        //public async Task UserInfoAsync(IUser user = null)
-        //{
-        //    user ??= Context.User;
+        // public async Task UserInfoAsync(IUser user = null)
+        // {
+        //     user ??= Context.User;
 
-        //    await ReplyAsync(user.ToString());
-        //}
+        //     await ReplyAsync(user.ToString());
+        // }
 
         // Ban a user
         //[Command("ban")]

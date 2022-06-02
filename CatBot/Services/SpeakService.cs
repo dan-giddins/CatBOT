@@ -16,14 +16,14 @@ namespace CatBot.Services
             _services = services;
         }
 
-        public async Task Initialize(TaskCompletionSource<bool> tcs)
+        public async Task Initialize(TaskCompletionSource<bool> waitForReady)
         {
-            // TODO: make this a callback
-            //await Task.Delay(5000);
-            await tcs.Task;
+            await waitForReady.Task;
+            var waitForVoice = new TaskCompletionSource<bool>();
+            waitForVoice.TrySetResult(true);
             GreetingMeow();
-            RandomMeow();
-            AddListenForVoiceJoin();
+            RandomMeow(waitForVoice);
+            AddListenForVoiceJoin(waitForVoice);
         }
 
         private void GreetingMeow()
@@ -32,32 +32,48 @@ namespace CatBot.Services
             {
                 try
                 {
-                    channel.SendMessageAsync("*meows happily*");
+                    channel.SendMessageAsync("*meows hello*");
                 }
                 catch (NotSupportedException)
                 { }
             }
         }
 
-        private async Task RandomMeow()
+        private async Task RandomMeow(TaskCompletionSource<bool> waitForVoice)
         {
             var rnd = new Random();
             while (true)
             {
-                await Task.Delay((int)(rnd.NextDouble() * 1000000));
+                await Task.Delay((int)(rnd.NextDouble() * 10000));
                 foreach (var channel in GetAllTextChannels())
                 {
                     try
                     {
-                        channel.SendMessageAsync("*meows randomly*");
+                        channel.SendMessageAsync("*meows for attention*");
                     }
                     catch (NotSupportedException)
                     { }
                 }
+                foreach (var channel in GetAllVoiceChannels())
+                {
+                    try
+                    {
+                        await waitForVoice.Task;
+                        waitForVoice.SetResult(false);
+                        await Task.Delay(1000);
+                        await MeowOnVoice(await channel.ConnectAsync(), "Audio/meow_attention.m4a");
+                    }
+                    catch (NotSupportedException)
+                    { }
+                    finally
+                    {
+                        waitForVoice.SetResult(true);
+                    }
+                }
             }
         }
 
-        private void AddListenForVoiceJoin() =>
+        private void AddListenForVoiceJoin(TaskCompletionSource<bool> waitForVoice) =>
             _discord.UserVoiceStateUpdated += async (user, before, after) =>
             {
                 if (user.Id != _discord.CurrentUser.Id
@@ -67,18 +83,24 @@ namespace CatBot.Services
                     var currentGuild = after.VoiceChannel.Guild;
                     // connect to new vc
                     Console.WriteLine($"Connecting...");
-                    Task.Run(() => ConnectToVoice(after.VoiceChannel));
+                    Task.Run(() => ConnectToVoice(after.VoiceChannel, user, waitForVoice));
                 }
             };
 
-        private async Task ConnectToVoice(SocketVoiceChannel voiceChannel)
+        private async Task ConnectToVoice(
+            SocketVoiceChannel voiceChannel,
+            SocketUser user,
+            TaskCompletionSource<bool> waitForVoice)
         {
             try
             {
+                await waitForVoice.Task;
+                waitForVoice.SetResult(false);
                 await Task.Delay(1000);
                 var connection = await voiceChannel.ConnectAsync();
                 Console.WriteLine($"Connected!");
-                await MeowOnVoice(connection);
+                MeowInTextChat(connection, user);
+                await MeowOnVoice(connection, "Audio/meow_hello.m4a");
             }
             catch (TaskCanceledException)
             {
@@ -88,12 +110,29 @@ namespace CatBot.Services
             {
                 Console.WriteLine("Already connected");
             }
+            finally
+            {
+                waitForVoice.SetResult(true);
+            }
         }
 
-        private async Task MeowOnVoice(IAudioClient connection)
+        private void MeowInTextChat(IAudioClient connection, SocketUser user)
+        {
+            foreach (var channel in GetAllTextChannels())
+            {
+                try
+                {
+                    channel.SendMessageAsync($"*meows at {user}*");
+                }
+                catch (NotSupportedException)
+                { }
+            }
+        }
+
+        private async Task MeowOnVoice(IAudioClient connection, string audioPath)
         {
             Console.WriteLine($"Meowing...");
-            await SendAsync(connection, "Audio/meow.m4a");
+            await SendAsync(connection, audioPath);
             Console.WriteLine($"Finished meowing");
         }
 
@@ -117,13 +156,13 @@ namespace CatBot.Services
             }
         }
 
-        private IEnumerable<SocketTextChannel> GetAllTextChannels()
-            => _discord.Guilds.SelectMany(x => x.TextChannels);
+        private IEnumerable<SocketTextChannel> GetAllTextChannels() =>
+            _discord.Guilds.SelectMany(x => x.TextChannels);
 
-        private IEnumerable<SocketVoiceChannel> GetAllVoiceChannels()
-            => _discord.Guilds.SelectMany(x => x.VoiceChannels);
+        private IEnumerable<SocketVoiceChannel> GetAllVoiceChannels() =>
+            _discord.Guilds.SelectMany(x => x.VoiceChannels);
 
-        private IReadOnlyCollection<SocketGuild> GetAllGuilds()
-            => _discord.Guilds;
+        private IReadOnlyCollection<SocketGuild> GetAllGuilds() =>
+            _discord.Guilds;
     }
 }

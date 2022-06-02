@@ -17,7 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Audio\meow.m4a">
+    <None Update="Audio\meow_attention.m4a">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Audio\meow_hello.m4a">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="ffmpeg.exe">

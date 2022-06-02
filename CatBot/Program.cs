@@ -8,8 +8,8 @@ namespace CatBot
 {
     internal class Program
     {
-        private static void Main(string[] args)
-            => new Program().MainAsync().GetAwaiter().GetResult();
+        private static void Main(string[] args) =>
+            new Program().MainAsync().GetAwaiter().GetResult();
 
         public async Task MainAsync()
         {
@@ -18,12 +18,12 @@ namespace CatBot
                 var client = services.GetRequiredService<DiscordSocketClient>();
                 client.Log += LogAsync;
                 services.GetRequiredService<CommandService>().Log += LogAsync;
-                var tcs = new TaskCompletionSource<bool>();
-                client.Ready += async () => tcs.SetResult(true);
+                var waitForReady = new TaskCompletionSource<bool>();
+                client.Ready += async () => waitForReady.SetResult(true);
                 await client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("CatBotToken"));
                 await client.StartAsync();
                 await services.GetRequiredService<ListenService>().Initialize();
-                await services.GetRequiredService<SpeakService>().Initialize(tcs);
+                await services.GetRequiredService<SpeakService>().Initialize(waitForReady);
                 await Task.Delay(Timeout.Infinite);
             }
         }
