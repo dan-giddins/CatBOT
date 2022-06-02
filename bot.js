@@ -1,5 +1,5 @@
 const generalId = "673983768557649935";
-
+const voiceId = "673983768557649946";
 var fs = require("fs");
 var Discord = require("discord.io");
 var logger = require("winston");
@@ -43,7 +43,6 @@ bot.on("message", function (user, userID, channelID, message, evt) {
     var cmd = args[0];
     args = args.splice(1);
     switch (cmd) {
-      // !ping
       case "meow":
         console.log(channelID);
         bot.sendMessage({
@@ -51,7 +50,13 @@ bot.on("message", function (user, userID, channelID, message, evt) {
           message: "*meows back at you*",
         });
         break;
-      // Just add any case commands if you want to..
+      case "stop":
+        bot.disconnect();
+        break;
+      case "voice":
+        joinVoice();
+      case "vocalmeow":
+        vocalMeow();
     }
   }
 });
@@ -66,34 +71,43 @@ bot.on("any", function (event) {
       });
       break;
     case "VOICE_STATE_UPDATE":
-      bot.sendMessage({
-        to: generalId,
-        message: "*meows inquisitively*",
-      });
-      var voiceChannelID = event.d.channel_id;
-      console.log("test1");
-      //Let's join the voice channel, the ID is whatever your voice channel's ID is.
-        bot.joinVoiceChannel(voiceChannelID, function (error, events) {
-          console.log("test2");
-          //Check to see if any errors happen while joining.
-          if (error) return console.error(error);
-          //Then get the audio context
-          client.getAudioContext(voiceChannelID, function (error, stream) {
-            console.log("test3");
-            //Once again, check to see if any errors exist
-            if (error) return console.error(error);
-            //Create a stream to your file and pipe it to the stream
-            //Without {end: false}, it would close up the stream, so make sure to include that.
-            fs.createReadStream("meow.m4a").pipe(stream, { end: false });
-            console.log("test4");
-            //The stream fires `done` when it's got nothing else to send to Discord.
-            stream.on("done", function () {
-              //Handle
-              console.log("test5");
-            });
-          });
-        });
-      }
+      //joinVoiceAndMeow(event);
       break;
   }
 });
+
+function joinVoice() {
+  bot.sendMessage({
+    to: generalId,
+    message: "*meows inquisitively*",
+  });
+  //var voiceChannelID = event.d.channel_id;
+  var voiceChannelID = voiceId;
+  console.log(voiceChannelID);
+  console.log("test1");
+  //Let's join the voice channel, the ID is whatever your voice channel's ID is.
+  bot.joinVoiceChannel(voiceChannelID, function (error, events) {
+    console.log("test2");
+    //Check to see if any errors happen while joining.
+    if (error) return console.error(error);
+  });
+}
+
+function vocalMeow() {
+  var voiceChannelID = voiceId;
+  //Then get the audio context
+  bot.getAudioContext(voiceChannelID, function (error, stream) {
+    console.log("test3");
+    //Once again, check to see if any errors exist
+    if (error) return console.error(error);
+    //Create a stream to your file and pipe it to the stream
+    //Without {end: false}, it would close up the stream, so make sure to include that.
+    fs.createReadStream("meow.m4a").pipe(stream, { end: false });
+    console.log("test4");
+    //The stream fires `done` when it's got nothing else to send to Discord.
+    stream.on("done", function () {
+      //Handle
+      console.log("test5");
+    });
+  });
+}
