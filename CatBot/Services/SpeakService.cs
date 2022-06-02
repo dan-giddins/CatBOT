@@ -18,6 +18,7 @@ namespace CatBot.Services
 
         public async Task InitializeAsync()
         {
+            // TODO: make this a callback
             await Task.Delay(5000);
             GreetingMeow();
             RandomMeow();
@@ -62,23 +63,35 @@ namespace CatBot.Services
                     && after.VoiceChannel is not null
                     && !after.VoiceChannel.ConnectedUsers.Any(x => x.Id == _discord.CurrentUser.Id))
                 {
+                    var currentGuild = after.VoiceChannel.Guild;
+                    // connect to new vc
                     Console.WriteLine($"Connecting...");
-                    var connectionedTask = after.VoiceChannel.ConnectAsync();
-                    Task.Run(() => ConnectToVoice(connectionedTask));
+                    Task.Run(() => ConnectToVoice(after.VoiceChannel));
                 }
             };
 
-        private async Task ConnectToVoice(Task<IAudioClient> connectionedTask)
+        private async Task ConnectToVoice(SocketVoiceChannel voiceChannel)
         {
             try
             {
-                var connection = await connectionedTask;
+                //// disconnect from all other vc's first
+                //foreach (var channel in voiceChannel.Guild.VoiceChannels)
+                //{
+                //    await channel.DisconnectAsync();
+                //}
+                await voiceChannel.DisconnectAsync();
+                await Task.Delay(1000);
+                var connection = await voiceChannel.ConnectAsync();
                 Console.WriteLine($"Connected!");
                 await MeowOnVoice(connection);
             }
-            catch (TaskCanceledException e)
+            catch (TaskCanceledException)
             {
                 Console.WriteLine("Task canceled");
+            }
+            catch (InvalidOperationException)
+            {
+                Console.WriteLine("Already connected");
             }
         }
 
