@@ -18,10 +18,12 @@ namespace CatBot
                 var client = services.GetRequiredService<DiscordSocketClient>();
                 client.Log += LogAsync;
                 services.GetRequiredService<CommandService>().Log += LogAsync;
+                var tcs = new TaskCompletionSource<bool>();
+                client.Ready += async () => tcs.SetResult(true);
                 await client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("CatBotToken"));
                 await client.StartAsync();
-                await services.GetRequiredService<ListenService>().InitializeAsync();
-                await services.GetRequiredService<SpeakService>().InitializeAsync();
+                await services.GetRequiredService<ListenService>().Initialize();
+                await services.GetRequiredService<SpeakService>().Initialize(tcs);
                 await Task.Delay(Timeout.Infinite);
             }
         }

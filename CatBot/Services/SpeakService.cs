@@ -16,10 +16,11 @@ namespace CatBot.Services
             _services = services;
         }
 
-        public async Task InitializeAsync()
+        public async Task Initialize(TaskCompletionSource<bool> tcs)
         {
             // TODO: make this a callback
-            await Task.Delay(5000);
+            //await Task.Delay(5000);
+            await tcs.Task;
             GreetingMeow();
             RandomMeow();
             AddListenForVoiceJoin();

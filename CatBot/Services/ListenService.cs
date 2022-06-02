@@ -21,7 +21,7 @@ namespace CatBot.Services
             _discord.MessageReceived += MessageReceivedAsync;
         }
 
-        public async Task InitializeAsync() =>
+        public async Task Initialize() =>
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
 
         public async Task MessageReceivedAsync(SocketMessage rawMessage)
