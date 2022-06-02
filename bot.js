@@ -1,113 +1,45 @@
 const generalId = "673983768557649935";
 const voiceId = "673983768557649946";
-var fs = require("fs");
-var Discord = require("discord.io");
-var logger = require("winston");
+const CLIENT_ID = "981849978848829480"
+const GUILD_ID = "673983767848681483"
+const { REST } = require('@discordjs/rest');
+const { Routes } = require('discord-api-types/v10');
 var auth = require("./auth.json");
-const { join } = require("path");
 
-// Configure logger settings
-logger.remove(logger.transports.Console);
-logger.add(new logger.transports.Console(), {
-  colorize: true,
-});
-logger.level = "debug";
+const commands = [
+	{
+		name: 'ping',
+		description: 'Replies with Pong!',
+	},
+];
 
-// Initialize Discord Bot
-var bot = new Discord.Client({
-  token: auth.token,
-  autorun: true,
-});
+const rest = new REST({ version: '10' }).setToken(auth.token);
 
-// main
-bot.on("ready", function (evt) {
-  logger.info("Connected as " + bot.username + " - (" + bot.id + ")");
-  bot.sendMessage({
-    to: generalId,
-    message: "*meows happily*",
-  });
-  setInterval(function () {
-    bot.sendMessage({
-      to: generalId,
-      message: "*meows randomly*",
-    });
-  }, 1000000 * Math.random());
-});
+(async () => {
+	try {
+		console.log('Started refreshing application (/) commands.');
 
-// on message
-bot.on("message", function (user, userID, channelID, message, evt) {
-  // Our bot needs to know if it will execute a command
-  // It will listen for messages that will start with `!`
-  if (message.substring(0, 1) == "!") {
-    var args = message.substring(1).split(" ");
-    var cmd = args[0];
-    args = args.splice(1);
-    switch (cmd) {
-      case "meow":
-        console.log(channelID);
-        bot.sendMessage({
-          to: channelID,
-          message: "*meows back at you*",
-        });
-        break;
-      case "stop":
-        bot.disconnect();
-        break;
-      case "voice":
-        joinVoice();
-      case "vocalmeow":
-        vocalMeow();
-    }
-  }
+		await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
+
+		console.log('Successfully reloaded application (/) commands.');
+	} catch (error) {
+		console.error(error);
+	}
+})();
+
+const { Client, GatewayIntentBits } = require('discord.js');
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+client.on('ready', () => {
+	console.log(`Logged in as ${client.user.tag}!`);
 });
 
-// on event
-bot.on("any", function (event) {
-  switch (event.t) {
-    case "MESSAGE_DELETE":
-      bot.sendMessage({
-        to: event.d.channel_id,
-        message: "*meows sadly*",
-      });
-      break;
-    case "VOICE_STATE_UPDATE":
-      //joinVoiceAndMeow(event);
-      break;
-  }
+client.on('interactionCreate', async (interaction) => {
+	if (!interaction.isCommand()) return;
+
+	if (interaction.commandName === 'ping') {
+		await interaction.reply('Pong!');
+	}
 });
 
-function joinVoice() {
-  bot.sendMessage({
-    to: generalId,
-    message: "*meows inquisitively*",
-  });
-  //var voiceChannelID = event.d.channel_id;
-  var voiceChannelID = voiceId;
-  console.log(voiceChannelID);
-  console.log("test1");
-  //Let's join the voice channel, the ID is whatever your voice channel's ID is.
-  bot.joinVoiceChannel(voiceChannelID, function (error, events) {
-    console.log("test2");
-    //Check to see if any errors happen while joining.
-    if (error) return console.error(error);
-  });
-}
-
-function vocalMeow() {
-  var voiceChannelID = voiceId;
-  //Then get the audio context
-  bot.getAudioContext(voiceChannelID, function (error, stream) {
-    console.log("test3");
-    //Once again, check to see if any errors exist
-    if (error) return console.error(error);
-    //Create a stream to your file and pipe it to the stream
-    //Without {end: false}, it would close up the stream, so make sure to include that.
-    fs.createReadStream("meow.m4a").pipe(stream, { end: false });
-    console.log("test4");
-    //The stream fires `done` when it's got nothing else to send to Discord.
-    stream.on("done", function () {
-      //Handle
-      console.log("test5");
-    });
-  });
-}
+client.login('token');
