@@ -39,10 +39,12 @@ namespace CatBot.Services
 
         private async Task RandomMeow()
         {
+            Console.WriteLine("New random meows");
             var rnd = new Random();
             while (true)
             {
-                await Task.Delay((int)(rnd.NextDouble() * 10000));
+                Console.WriteLine("random meow loop");
+                await Task.Delay((int)(rnd.NextDouble() * 100000));
                 foreach (var channel in GetAllTextChannels())
                 {
                     try
@@ -50,7 +52,8 @@ namespace CatBot.Services
                         channel.SendMessageAsync("*meows for attention*");
                     }
                     catch (NotSupportedException)
-                    { }
+                    {
+                    }
                 }
                 foreach (var channel in GetAllVoiceChannels())
                 {
@@ -60,7 +63,16 @@ namespace CatBot.Services
                         await MeowOnVoice(await channel.ConnectAsync(), "Audio/meow_attention.m4a");
                     }
                     catch (NotSupportedException)
-                    { }
+                    {
+                    }
+                    catch (TimeoutException)
+                    {
+                        Console.WriteLine("TimeoutException");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Console.WriteLine("OperationCanceledException");
+                    }
                 }
             }
         }
@@ -92,11 +104,11 @@ namespace CatBot.Services
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine("Task canceled");
+                Console.WriteLine("TaskCanceledException");
             }
             catch (InvalidOperationException)
             {
-                Console.WriteLine("Already connected");
+                Console.WriteLine("InvalidOperationException");
             }
         }
 
@@ -115,9 +127,9 @@ namespace CatBot.Services
 
         private async Task MeowOnVoice(IAudioClient connection, string audioPath)
         {
-            Console.WriteLine($"Meowing...");
+            Console.WriteLine($"Meowing {audioPath}...");
             await SendAsync(connection, audioPath);
-            Console.WriteLine($"Finished meowing");
+            Console.WriteLine($"Finished meowing {audioPath}.");
         }
 
         private Process CreateStream(string path) =>
@@ -135,8 +147,7 @@ namespace CatBot.Services
             using (var output = ffmpeg.StandardOutput.BaseStream)
             using (var discord = client.CreatePCMStream(AudioApplication.Mixed))
             {
-                try { await output.CopyToAsync(discord); }
-                finally { await discord.FlushAsync(); }
+                await output.CopyToAsync(discord);
             }
         }
 
