@@ -19,6 +19,7 @@ namespace CatBot.Services
             await Task.Delay(5000);
             await GreetingMeow();
             RandomMeow();
+            ListenForVoiceJoin();
         }
 
         private async Task GreetingMeow()
@@ -39,7 +40,7 @@ namespace CatBot.Services
             var rnd = new Random();
             while (true)
             {
-                await Task.Delay(rnd.Next() / 10000);
+                await Task.Delay(rnd.Next() / 1000);
                 foreach (var channel in GetAllTextChannels())
                 {
                     try
@@ -52,7 +53,25 @@ namespace CatBot.Services
             }
         }
 
+        private async Task ListenForVoiceJoin() =>
+            _discord.UserVoiceStateUpdated += (user, before, after)
+            =>
+            {
+                if (user.Id != _discord.CurrentUser.Id
+                    && after.VoiceChannel is not null)
+                {
+                    return after.VoiceChannel.ConnectAsync();
+                }
+                return null;
+            };
+
         private IEnumerable<SocketTextChannel> GetAllTextChannels()
             => _discord.Guilds.SelectMany(x => x.TextChannels);
+
+        private IEnumerable<SocketVoiceChannel> GetAllVoiceChannels()
+            => _discord.Guilds.SelectMany(x => x.VoiceChannels);
+
+        private IReadOnlyCollection<SocketGuild> GetAllGuilds()
+            => _discord.Guilds;
     }
 }

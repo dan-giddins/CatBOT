@@ -44,7 +44,10 @@ namespace CatBot.Services
             await _commands.ExecuteAsync(context, argPos, _services);
         }
 
-        public async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
+        public async Task CommandExecutedAsync(
+            Optional<CommandInfo> command,
+            ICommandContext context,
+            IResult result)
         {
             if (!command.IsSpecified)
             {
