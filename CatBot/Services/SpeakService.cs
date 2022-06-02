@@ -43,7 +43,7 @@ namespace CatBot.Services
             var rnd = new Random();
             while (true)
             {
-                await Task.Delay(rnd.Next() / 1000);
+                await Task.Delay((int)(rnd.NextDouble() * 1000000));
                 foreach (var channel in GetAllTextChannels())
                 {
                     try
@@ -74,12 +74,6 @@ namespace CatBot.Services
         {
             try
             {
-                //// disconnect from all other vc's first
-                //foreach (var channel in voiceChannel.Guild.VoiceChannels)
-                //{
-                //    await channel.DisconnectAsync();
-                //}
-                await voiceChannel.DisconnectAsync();
                 await Task.Delay(1000);
                 var connection = await voiceChannel.ConnectAsync();
                 Console.WriteLine($"Connected!");
