@@ -1,32 +1,29 @@
-﻿using Discord;
+﻿using CatBot.Services;
+using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CatBot
 {
     internal class Program
     {
-        private readonly DiscordSocketClient _client;
-
         private static void Main(string[] args)
-            => new Program()
-                .MainAsync()
-                .GetAwaiter()
-                .GetResult();
-
-        public Program()
-        {
-            _client = new DiscordSocketClient();
-            _client.Log += LogAsync;
-            _client.Ready += ReadyAsync;
-            _client.MessageReceived += MessageReceivedAsync;
-            _client.InteractionCreated += InteractionCreatedAsync;
-        }
+            => new Program().MainAsync().GetAwaiter().GetResult();
 
         public async Task MainAsync()
         {
-            await _client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("CatBotToken"));
-            await _client.StartAsync();
-            await Task.Delay(Timeout.Infinite);
+            using (var services = ConfigureServices())
+            {
+                var client = services.GetRequiredService<DiscordSocketClient>();
+                client.Log += LogAsync;
+                services.GetRequiredService<CommandService>().Log += LogAsync;
+                await client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("CatBotToken"));
+                await client.StartAsync();
+                await services.GetRequiredService<ListenService>().InitializeAsync();
+                await services.GetRequiredService<SpeakService>().InitializeAsync();
+                await Task.Delay(Timeout.Infinite);
+            }
         }
 
         private Task LogAsync(LogMessage log)
@@ -35,38 +32,14 @@ namespace CatBot
             return Task.CompletedTask;
         }
 
-        private Task ReadyAsync()
-        {
-            Console.WriteLine($"{_client.CurrentUser} is connected!");
-            return Task.CompletedTask;
-        }
-
-        private async Task MessageReceivedAsync(SocketMessage message)
-        {
-            if (message.Author.Id == _client.CurrentUser.Id)
-            {
-                return;
-            }
-            if (message.Content == "!ping")
-            {
-                var cb = new ComponentBuilder().WithButton("Click me!", "unique-id", ButtonStyle.Primary);
-                await message.Channel.SendMessageAsync("pong!", components: cb.Build());
-            }
-        }
-
-        private async Task InteractionCreatedAsync(SocketInteraction interaction)
-        {
-            if (interaction is SocketMessageComponent component)
-            {
-                if (component.Data.CustomId == "unique-id")
-                {
-                    await interaction.RespondAsync("Thank you for clicking my button!");
-                }
-                else
-                {
-                    Console.WriteLine("An ID has been received that has no handler!");
-                }
-            }
-        }
+        private ServiceProvider ConfigureServices() =>
+            new ServiceCollection()
+                .AddSingleton<DiscordSocketClient>()
+                .AddSingleton<CommandService>()
+                .AddSingleton<ListenService>()
+                .AddSingleton<SpeakService>()
+                .AddSingleton<HttpClient>()
+                .AddSingleton<PictureService>()
+                .BuildServiceProvider();
     }
 }
