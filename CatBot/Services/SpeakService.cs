@@ -59,21 +59,32 @@ namespace CatBot.Services
             _discord.UserVoiceStateUpdated += async (user, before, after) =>
             {
                 if (user.Id != _discord.CurrentUser.Id
-                    && after.VoiceChannel is not null)
+                    && after.VoiceChannel is not null
+                    && !after.VoiceChannel.ConnectedUsers.Any(x => x.Id == _discord.CurrentUser.Id))
                 {
-                    Console.WriteLine($"User: {user}");
-                    Console.WriteLine($"Before: {before}");
-                    Console.WriteLine($"After: {after}");
                     Console.WriteLine($"Connecting...");
                     var connectionedTask = after.VoiceChannel.ConnectAsync();
-                    Task.Run(() => MeowOnVoice(connectionedTask));
+                    Task.Run(() => ConnectToVoice(connectionedTask));
                 }
             };
 
-        private async Task MeowOnVoice(Task<IAudioClient> connectionedTask)
+        private async Task ConnectToVoice(Task<IAudioClient> connectionedTask)
         {
-            var connection = await connectionedTask;
-            Console.WriteLine($"Connected!");
+            try
+            {
+                var connection = await connectionedTask;
+                Console.WriteLine($"Connected!");
+                await MeowOnVoice(connection);
+            }
+            catch (TaskCanceledException e)
+            {
+                Console.WriteLine("Task canceled");
+            }
+        }
+
+        private async Task MeowOnVoice(IAudioClient connection)
+        {
+            Console.WriteLine($"Meowing...");
             await SendAsync(connection, "Audio/meow.m4a");
             Console.WriteLine($"Finished meowing");
         }
