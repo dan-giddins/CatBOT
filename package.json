@@ -1,0 +1,11 @@
+{
+  "name": "catbot",
+  "version": "1.0.0",
+  "description": "A Cat BOT",
+  "main": "bot.js",
+  "author": "Protocat",
+  "dependencies": {
+    "discord.io": "^2.5.3",
+    "winston": "^3.7.2"
+  }
+}
