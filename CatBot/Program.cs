@@ -1,43 +1,72 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Newtonsoft.Json.Linq;
 
 namespace CatBot
 {
-    public class Program : IDisposable
+    internal class Program
     {
-        private DiscordSocketClient? _client = null;
+        private readonly DiscordSocketClient _client;
 
-        public static void Main(string[] args) =>
-            new Program().MainAsync().GetAwaiter().GetResult();
+        private static void Main(string[] args)
+            => new Program()
+                .MainAsync()
+                .GetAwaiter()
+                .GetResult();
 
-        private async Task MainAsync()
+        public Program()
         {
             _client = new DiscordSocketClient();
-            _client.Log += Log;
-            var auth = JObject.Parse(File.ReadAllText("auth.json"));
-            var token = auth["token"].ToString();
-            await _client.LoginAsync(TokenType.Bot, token);
-            await _client.StartAsync();
-            _client.MessageUpdated += MessageUpdated;
-            _client.Ready += () =>
-            {
-                Console.WriteLine("Bot is connected!");
-                return Task.CompletedTask;
-            };
-            await Task.Delay(-1);
+            _client.Log += LogAsync;
+            _client.Ready += ReadyAsync;
+            _client.MessageReceived += MessageReceivedAsync;
+            _client.InteractionCreated += InteractionCreatedAsync;
         }
 
-        private async Task MessageUpdated(Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel channel)
+        public async Task MainAsync()
         {
-            // If the message was not in the cache, downloading it will result in getting a copy of `after`.
-            var message = await before.GetOrDownloadAsync();
-            Console.WriteLine($"{message} -> {after}");
+            await _client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("CatBotToken"));
+            await _client.StartAsync();
+            await Task.Delay(Timeout.Infinite);
         }
 
-        private async Task Log(LogMessage msg) =>
-            Console.WriteLine(msg.ToString());
+        private Task LogAsync(LogMessage log)
+        {
+            Console.WriteLine(log.ToString());
+            return Task.CompletedTask;
+        }
 
-        public void Dispose() => throw new NotImplementedException();
+        private Task ReadyAsync()
+        {
+            Console.WriteLine($"{_client.CurrentUser} is connected!");
+            return Task.CompletedTask;
+        }
+
+        private async Task MessageReceivedAsync(SocketMessage message)
+        {
+            if (message.Author.Id == _client.CurrentUser.Id)
+            {
+                return;
+            }
+            if (message.Content == "!ping")
+            {
+                var cb = new ComponentBuilder().WithButton("Click me!", "unique-id", ButtonStyle.Primary);
+                await message.Channel.SendMessageAsync("pong!", components: cb.Build());
+            }
+        }
+
+        private async Task InteractionCreatedAsync(SocketInteraction interaction)
+        {
+            if (interaction is SocketMessageComponent component)
+            {
+                if (component.Data.CustomId == "unique-id")
+                {
+                    await interaction.RespondAsync("Thank you for clicking my button!");
+                }
+                else
+                {
+                    Console.WriteLine("An ID has been received that has no handler!");
+                }
+            }
+        }
     }
 }
