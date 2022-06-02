@@ -39,11 +39,9 @@ namespace CatBot.Services
 
         private async Task RandomMeow()
         {
-            Console.WriteLine("New random meows");
             var rnd = new Random();
             while (true)
             {
-                Console.WriteLine("random meow loop");
                 await Task.Delay((int)(rnd.NextDouble() * 100000));
                 foreach (var channel in GetAllTextChannels())
                 {
@@ -85,7 +83,7 @@ namespace CatBot.Services
                     && !after.VoiceChannel.ConnectedUsers.Any(x => x.Id == _discord.CurrentUser.Id))
                 {
                     // connect to new vc
-                    Console.WriteLine($"Connecting...");
+                    Console.WriteLine($"Connecting to {after.VoiceChannel}...");
                     Task.Run(() => ConnectToVoice(after.VoiceChannel, user));
                 }
             };
@@ -98,7 +96,7 @@ namespace CatBot.Services
             {
                 await Task.Delay(1000);
                 var connection = await voiceChannel.ConnectAsync();
-                Console.WriteLine($"Connected!");
+                Console.WriteLine($"Connected to {voiceChannel}.");
                 MeowInTextChat(connection, user);
                 await MeowOnVoice(connection, "Audio/meow_hello.m4a");
             }
