@@ -19,11 +19,9 @@ namespace CatBot.Services
         public async Task Initialize(TaskCompletionSource<bool> waitForReady)
         {
             await waitForReady.Task;
-            var waitForVoice = new TaskCompletionSource<bool>();
-            waitForVoice.TrySetResult(true);
             GreetingMeow();
-            RandomMeow(waitForVoice);
-            AddListenForVoiceJoin(waitForVoice);
+            RandomMeow();
+            AddListenForVoiceJoin();
         }
 
         private void GreetingMeow()
@@ -39,7 +37,7 @@ namespace CatBot.Services
             }
         }
 
-        private async Task RandomMeow(TaskCompletionSource<bool> waitForVoice)
+        private async Task RandomMeow()
         {
             var rnd = new Random();
             while (true)
@@ -58,44 +56,34 @@ namespace CatBot.Services
                 {
                     try
                     {
-                        await waitForVoice.Task;
-                        waitForVoice.SetResult(false);
                         await Task.Delay(1000);
                         await MeowOnVoice(await channel.ConnectAsync(), "Audio/meow_attention.m4a");
                     }
                     catch (NotSupportedException)
                     { }
-                    finally
-                    {
-                        waitForVoice.SetResult(true);
-                    }
                 }
             }
         }
 
-        private void AddListenForVoiceJoin(TaskCompletionSource<bool> waitForVoice) =>
+        private void AddListenForVoiceJoin() =>
             _discord.UserVoiceStateUpdated += async (user, before, after) =>
             {
                 if (user.Id != _discord.CurrentUser.Id
                     && after.VoiceChannel is not null
                     && !after.VoiceChannel.ConnectedUsers.Any(x => x.Id == _discord.CurrentUser.Id))
                 {
-                    var currentGuild = after.VoiceChannel.Guild;
                     // connect to new vc
                     Console.WriteLine($"Connecting...");
-                    Task.Run(() => ConnectToVoice(after.VoiceChannel, user, waitForVoice));
+                    Task.Run(() => ConnectToVoice(after.VoiceChannel, user));
                 }
             };
 
         private async Task ConnectToVoice(
             SocketVoiceChannel voiceChannel,
-            SocketUser user,
-            TaskCompletionSource<bool> waitForVoice)
+            SocketUser user)
         {
             try
             {
-                await waitForVoice.Task;
-                waitForVoice.SetResult(false);
                 await Task.Delay(1000);
                 var connection = await voiceChannel.ConnectAsync();
                 Console.WriteLine($"Connected!");
@@ -109,10 +97,6 @@ namespace CatBot.Services
             catch (InvalidOperationException)
             {
                 Console.WriteLine("Already connected");
-            }
-            finally
-            {
-                waitForVoice.SetResult(true);
             }
         }
 
