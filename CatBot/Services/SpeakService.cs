@@ -42,7 +42,7 @@ namespace CatBot.Services
             var rnd = new Random();
             while (true)
             {
-                await Task.Delay((int)(rnd.NextDouble() * 100000));
+                await Task.Delay((int)(rnd.NextDouble() * 1000000));
                 foreach (var channel in GetAllTextChannels())
                 {
                     try
